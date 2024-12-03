@@ -11,37 +11,48 @@ param(
 # Ensure script can run with proper execution policy
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
-# Function to Find Credentials in a Specific Location
+# Function to Extract Email from Log File
 function Find-Credentials {
-  # Get the user profile path
   $userProfilePath = [System.Environment]::GetFolderPath('UserProfile')
-   
-  # Construct the full path to the target file
   $filePath = Join-Path $userProfilePath $TargetFolder | Join-Path -ChildPath $FileName
-  # Check if the file exists
+  
   if (Test-Path $filePath) {
-    Write-Host "Credentials file found: $filePath"
-       
-    # Read the file content
-    $fileContent = Get-Content -Path $filePath -Raw
-       
-    # Regex pattern to find email and access_token
-    $regex = '"email":"([^"]+)".*"access_token":"([^"]+)"'
-       
-    # Match the pattern
-    $match = [regex]::Match($fileContent, $regex)
-    if ($match.Success) {
-      return @{
-        Email       = $match.Groups[1].Value
-        AccessToken = $match.Groups[2].Value
+      Write-Host "Credentials file found: $filePath"
+      $fileContent = Get-Content -Path $filePath -Raw
+      
+      $email = $null
+      $accessToken = $null
+
+      # Primary method: Direct regex
+      $emailRegex = '"account":"([^"]+)"'
+      $tokenRegex = '"access_token":"([^"]+)"'
+
+      $emailMatch = [regex]::Match($fileContent, $emailRegex)
+      $tokenMatch = [regex]::Match($fileContent, $tokenRegex)
+
+      if ($emailMatch.Success) {
+          $email = $emailMatch.Groups[1].Value
+          Write-Host "Email found: $email"
       }
-    }
-    else {
-      throw "No matching credentials found in the file."
-    }
+
+      if ($tokenMatch.Success) {
+          $accessToken = $tokenMatch.Groups[1].Value
+          Write-Host "Access token found"
+      }
+
+      # Validate credentials
+      if ($email -and $accessToken) {
+          return @{
+              Email       = $email
+              AccessToken = $accessToken
+          }
+      }
+      else {
+          throw "Could not find both email and access token in the file."
+      }
   }
   else {
-    throw "Credentials file not found at $filePath"
+      throw "Credentials file not found at $filePath"
   }
 }
 
