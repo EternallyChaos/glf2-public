@@ -4,7 +4,8 @@ param(
   [string]$ApiUrl = "https://gf2-gacha-record-us.sunborngame.com/list",
   [int]$GameChannelId = 5,
   [int]$TypeId = 3,
-  [int]$DelayBetweenCalls = 500, # Delay in milliseconds
+  [int]$MinDelayBetweenCalls = 400,  # Minimum delay in milliseconds
+  [int]$MaxDelayBetweenCalls = 700,   # Maximum delay in milliseconds
   [string]$OutputFile = "$([Environment]::GetFolderPath('Desktop'))\gacha_history_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
 )
 
@@ -130,8 +131,8 @@ function Get-GachaHistory {
       do {
         # Add delay to prevent rate limiting
         if ($pageCount -gt 0) {
-          Write-Host "Waiting $DelayBetweenCalls ms to prevent rate limiting..."
-          Start-Sleep -Milliseconds $DelayBetweenCalls
+          $randomDelay = Get-Random -Minimum $MinDelayBetweenCalls -Maximum $MaxDelayBetweenCalls
+          Start-Sleep -Milliseconds $randomDelay
         }
 
         $data = Get-GachaHistoryData -NextId $nextId -Email $credentials.Email -AccessToken $credentials.AccessToken -BodyTypeId $bodyTypeId
