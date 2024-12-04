@@ -17,42 +17,42 @@ function Find-Credentials {
   $filePath = Join-Path $userProfilePath $TargetFolder | Join-Path -ChildPath $FileName
   
   if (Test-Path $filePath) {
-      Write-Host "Credentials file found: $filePath"
-      $fileContent = Get-Content -Path $filePath -Raw
+    Write-Host "Credentials file found: $filePath"
+    $fileContent = Get-Content -Path $filePath -Raw
       
-      $email = $null
-      $accessToken = $null
+    $email = $null
+    $accessToken = $null
 
-      # Primary method: Direct regex
-      $emailRegex = '"account":"([^"]+)"'
-      $tokenRegex = '"access_token":"([^"]+)"'
+    # Primary method: Direct regex
+    $emailRegex = '"account":"([^"]+)"'
+    $tokenRegex = '"access_token":"([^"]+)"'
 
-      $emailMatch = [regex]::Match($fileContent, $emailRegex)
-      $tokenMatch = [regex]::Match($fileContent, $tokenRegex)
+    $emailMatch = [regex]::Match($fileContent, $emailRegex)
+    $tokenMatch = [regex]::Match($fileContent, $tokenRegex)
 
-      if ($emailMatch.Success) {
-          $email = $emailMatch.Groups[1].Value
-          Write-Host "Email found: $email"
+    if ($emailMatch.Success) {
+      $email = $emailMatch.Groups[1].Value
+      Write-Host "Email found: $email"
+    }
+
+    if ($tokenMatch.Success) {
+      $accessToken = $tokenMatch.Groups[1].Value
+      Write-Host "Access token found"
+    }
+
+    # Validate credentials
+    if ($email -and $accessToken) {
+      return @{
+        Email       = $email
+        AccessToken = $accessToken
       }
-
-      if ($tokenMatch.Success) {
-          $accessToken = $tokenMatch.Groups[1].Value
-          Write-Host "Access token found"
-      }
-
-      # Validate credentials
-      if ($email -and $accessToken) {
-          return @{
-              Email       = $email
-              AccessToken = $accessToken
-          }
-      }
-      else {
-          throw "Could not find both email and access token in the file."
-      }
+    }
+    else {
+      throw "Could not find both email and access token in the file."
+    }
   }
   else {
-      throw "Credentials file not found at $filePath"
+    throw "Credentials file not found at $filePath"
   }
 }
 
@@ -142,16 +142,13 @@ function Get-GachaHistory {
         Write-Host "Retrieved page $pageCount for $typeName"
       } while ($nextId)
 
-      # Filter pulls from the last 6 months
-      $sixMonthsAgo = [Math]::Floor((Get-Date).AddMonths(-6).ToUniversalTime().Subtract((Get-Date -Date "1/1/1970")).TotalSeconds)
-       
-      $filteredPulls = $allPulls | Where-Object { $_.time -gt $sixMonthsAgo } |
-      Sort-Object -Property time -Descending |
+
+      $filteredPulls = $allPulls | 
       ForEach-Object {
         $_ | Add-Member -MemberType NoteProperty -Name formattedTime -Value (Format-Date -timestamp $_.time) -Force
         $_
       }
-
+      
       # Store filtered pulls for this procurement type
       $allProcurementHistories[$typeName] = $filteredPulls
     }
